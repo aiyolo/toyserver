@@ -27,6 +27,7 @@ ThreadPool<T>::ThreadPool(int threadCount): pool(std::make_shared<Pool>()){
     assert(threadCount>0);
     for(int i=0; i<threadCount; i++){
         std::thread([pool_=pool]{
+            // 多个线程同时访问任务队列，所以要加锁
             std::unique_lock<std::mutex> locker(pool_->mutex);
             while(!pool_->isClosed){
                 if(!pool_->tasks.empty()){

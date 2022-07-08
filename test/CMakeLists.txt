@@ -1,6 +1,21 @@
 project(test)
 cmake_minimum_required(VERSION 3.0)
 set(CMAKE_CXX_STANDARD 14)
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+
 find_package(Threads)
-add_executable(test_threadpool test_threadpool.cpp ${SOURCES})
-target_link_libraries(test_threadpool Threads::Threads)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR})
+message("aa${CMAKE_MODULE_PATH}")
+message("bb${CMAKE_CURRENT_SOURCE_DIR}")
+find_package(MySQL)
+find_package(OpenCV REQUIRED core OPTIONAL_COMPONENTS viz)
+include_directories(${MYSQL_INCLUDE_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/src)
+
+file(GLOB files ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+foreach(file ${files})
+    get_filename_component(file_name ${file} NAME_WE)
+    add_executable(${file_name} ${file} ${SOURCES})
+    target_link_libraries(${file_name} Threads::Threads ${MYSQL_LIB})
+endforeach(file ${files})
+    
