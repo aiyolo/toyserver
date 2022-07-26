@@ -24,13 +24,13 @@ private:
 
 };
 
-SqlConnPool::SqlConnPool():userCount(0){}
+inline SqlConnPool::SqlConnPool():userCount(0){}
 
-SqlConnPool* SqlConnPool::getInstance(){
+inline SqlConnPool* SqlConnPool::getInstance(){
     static SqlConnPool instance;
     return &instance;
 }
-void SqlConnPool::init(const char* host, const char* user, const char* passwd, const char* db, int port, int maxConn){
+inline void SqlConnPool::init(const char* host, const char* user, const char* passwd, const char* db, int port, int maxConn){
 	assert(maxConn>0);
 	for(int i=0; i<maxConn; i++){
 		MYSQL* conn = mysql_init(NULL);
@@ -46,7 +46,7 @@ void SqlConnPool::init(const char* host, const char* user, const char* passwd, c
 	}
 }
 
-MYSQL* SqlConnPool::getConn(){
+inline MYSQL* SqlConnPool::getConn(){
 	std::lock_guard<std::mutex> locker(mtx);
 	if(connQueue.empty()){
 		std::cout << "no more conn!\n";
@@ -57,17 +57,17 @@ MYSQL* SqlConnPool::getConn(){
 	return conn;
 }
 
-void SqlConnPool::releaseConn(MYSQL* conn){
+inline void SqlConnPool::releaseConn(MYSQL* conn){
 	std::lock_guard<std::mutex> locker(mtx);
 	connQueue.push(conn);
 }
 
-int SqlConnPool::getFreeConnCount(){
+inline int SqlConnPool::getFreeConnCount(){
     std::lock_guard<std::mutex> locker(mtx);
     return connQueue.size();
 }
 
-void SqlConnPool::destroy(){
+inline void SqlConnPool::destroy(){
 	std::lock_guard<std::mutex> locker(mtx);
 	while(!connQueue.empty()){
 		MYSQL* conn = connQueue.front();
@@ -76,6 +76,6 @@ void SqlConnPool::destroy(){
 	}
 }
 
-SqlConnPool::~SqlConnPool(){
+inline SqlConnPool::~SqlConnPool(){
 	destroy();
 }

@@ -4,11 +4,10 @@ set(CMAKE_CXX_STANDARD 14)
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 
 find_package(Threads)
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR})
+# list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR})
 message("aa${CMAKE_MODULE_PATH}")
 message("bb${CMAKE_CURRENT_SOURCE_DIR}")
-find_package(MySQL)
-find_package(OpenCV REQUIRED core OPTIONAL_COMPONENTS viz)
+# find_package(MySQL)
 include_directories(${MYSQL_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
