@@ -1,3 +1,6 @@
+#ifndef SQLCONNPOOL_HPP__
+#define SQLCONNPOOL_HPP__ 1
+
 #include <mutex>
 #include <thread>
 #include <queue>
@@ -79,3 +82,27 @@ inline void SqlConnPool::destroy(){
 inline SqlConnPool::~SqlConnPool(){
 	destroy();
 }
+
+class SqlConnRAII
+{
+public:
+	SqlConnRAII(MYSQL** sql, SqlConnPool *pool)
+	{
+		assert(pool);
+		*sql = pool->getConn();
+		sql_ = *sql;
+		pool_ = pool;
+	}
+	~SqlConnRAII()
+	{
+		if(sql_) 
+		{
+			pool_->releaseConn(sql_);
+		}
+	}
+private:
+	MYSQL* sql_;
+	SqlConnPool* pool_;
+};
+
+#endif

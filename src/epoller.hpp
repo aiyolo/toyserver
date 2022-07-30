@@ -1,3 +1,6 @@
+#ifndef EPOLLER_HPP__
+#define EPOLLER_HPP__ 1
+
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <unistd.h>
@@ -65,3 +68,5 @@ inline int Epoller::getFd(int index){
 inline uint32_t Epoller::getEvent(int index){
     return events_[index].events;
 }
+
+#endif

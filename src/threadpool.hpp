@@ -1,3 +1,6 @@
+#ifndef THREADPOLL_HPP__
+#define THREADPOLL_HPP__ 1
+
 #include <thread>
 #include <queue>
 #include <mutex>
@@ -63,3 +66,5 @@ bool ThreadPool<T>::append(T&& task){
     pool->cond.notify_one();
     return true;
 }
+
+#endif

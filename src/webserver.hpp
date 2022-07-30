@@ -1,4 +1,6 @@
-#include <asm-generic/socket.h>
+#ifndef WEBSERVER_HPP__
+#define WEBSERVER_HPP__ 1
+
 #include <cstring>
 #include <iostream>
 #include <fcntl.h>
@@ -25,7 +27,7 @@ public:
     void handleListenEvent();
     void handleReadEvent(HttpConn* client);
     void handleWriteEvent(HttpConn* client);
-    void handleErrorEvent(HttpConn* client);
+    void closeConn(HttpConn* client);
     void addClient_(int fd, sockaddr_in addr);
     void onRead_(HttpConn* client);
     void onWrite_(HttpConn* client);
@@ -50,12 +52,13 @@ private:
 inline Webserver::Webserver(int trigMode): epoller_(new Epoller(1024)), threadpool_(new ThreadPool<std::function<void()>>(10)), isRunning_(true), port_(8888){
     // getcwd 获得执行server命令的进程的当前路径
     // 相当于srcDir_.assign(char *)
-    srcDir_= getcwd(NULL, 0); 
+    // srcDir_= getcwd(NULL, 0); 
     // 如果没有找到“build”，将返回npos,即size_t类型的最大值,erase 将出错
     // srcDir_.erase(srcDir_.find("build"), string::npos);
-    srcDir_ += "/resources/";
-    cout << srcDir_ << endl;
-
+    srcDir_ += "/home/aiyolo/toyserver/resources/";
+    cout << "rootDir:" << srcDir_ << endl;
+    HttpConn::userCount = 0;
+    HttpConn::srcDir = srcDir_;
     // 初始化线程池
     // threadpool_ = new ThreadPool<std::function<void()>>(10);
     pool_ = SqlConnPool::getInstance();
@@ -97,7 +100,7 @@ inline void Webserver::start(){
                 if(events&EPOLLRDHUP){
                     std::cout << i << " EPOLLRDHUP" << std::endl;
                 }
-                handleErrorEvent(&users_[fd]);
+                closeConn(&users_[fd]);
             }
             // 客户端读事件
             else if(events & EPOLLIN){
@@ -157,6 +160,10 @@ inline bool Webserver::InitSocket(){
     }
     int reuse = 1;
     ret = setsockopt(listenFd_, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+    if(ret!=0)
+    {
+        std::cout << "setsockopt error" << std::endl;
+    }
     // todo: linger作用:优雅退出
     // struct linger optlinger = {0};
     // optlinger.l_onoff = 1;
@@ -164,6 +171,10 @@ inline bool Webserver::InitSocket(){
     // ret = setsockopt(listenFd_, SOL_SOCKET, SO_LINGER, &optlinger, sizeof(optlinger));
     ret = bind(listenFd_, (struct sockaddr*)&addr, sizeof(addr));
     listen(listenFd_, 5);
+    if(ret!=0)
+    {
+        std::cout << "bind error" << std::endl;
+    }
     // 将监听套接字加入epoll中
     epoller_->addFd(listenFd_, listenEvent_ | EPOLLIN); //主线程注册listen读事件
     setnonblocking(listenFd_);
@@ -201,7 +212,7 @@ inline void Webserver::handleListenEvent(){
 }
 
 inline void Webserver::handleReadEvent(HttpConn* client){
-    std::cout << "ddd" << std::endl;
+    std::cout << "handleReadEvent" << std::endl;
     // int errno_ =0;
     // client->read_(&errno_);
     threadpool_->append(std::bind(&Webserver::onRead_, this, client));
@@ -209,33 +220,68 @@ inline void Webserver::handleReadEvent(HttpConn* client){
 }
 
 inline void Webserver::handleWriteEvent(HttpConn* client){
-
-
+    std::cout << "handleWriteEvent" << std::endl;
+    threadpool_->append(std::bind(&Webserver::onWrite_, this, client));
 }
 
-inline void Webserver::handleErrorEvent(HttpConn* client){
+inline void Webserver::closeConn(HttpConn* client){
     epoller_->delFd(client->getFd());
-    client->close_();
+    client->handleClose();
 }
 
-void Webserver::addClient_(int fd, sockaddr_in addr){
+inline void Webserver::addClient_(int fd, sockaddr_in addr){
     users_[fd].init(fd, addr);
     epoller_->addFd(fd, connEvent_| EPOLLIN);
     setnonblocking(fd);
 }
 
-void Webserver::onRead_(HttpConn* client){
+// 读请求数据
+inline void Webserver::onRead_(HttpConn* client){
     int readErrno = 0;
-    client->read_(&readErrno);
+    int ret = client->handleRead(&readErrno);
+    if(ret <= 0 && readErrno!= EAGAIN)
+    {
+        closeConn(client);
+        return;
+    }
+    // 处理数据 
     onProcess(client);
-
 }
 
-void Webserver::onProcess(HttpConn* client){
-    if(0){
+inline void Webserver::onProcess(HttpConn* client){
+    // 客户端准备完数据，等待发送数据
+    if(client->process()){
         epoller_->modFd(client->getFd(), connEvent_ | EPOLLOUT);
     }
     else{
         epoller_->modFd(client->getFd(), connEvent_ | EPOLLIN);
     }
 }
+
+inline void Webserver::onWrite_(HttpConn* client)
+{
+    assert(client);
+    int ret = -1;
+    int writeErrno = -1;
+    ret = client->handleWrite(&writeErrno);
+    if(client->toWriteBytes()==0)
+    {
+        if(client->isKeepAlive())
+        {
+            onProcess(client);
+            return;
+        }
+    }
+    else if(ret<0)
+    {
+        if(writeErrno == EAGAIN)
+        {
+            epoller_->modFd(client->getFd(), connEvent_| EPOLLOUT);
+            return;
+        }
+    }
+    closeConn(client);
+    
+
+}
+#endif // WEBSERVER_HPP_INCLUDED

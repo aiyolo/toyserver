@@ -1,6 +1,7 @@
 project(ToyServer)
 cmake_minimum_required(VERSION 3.0)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
+# set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fdiagnostics-color=auto")
 find_package(Threads)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR})
 message("kk${CMAKE_SOURCE_DIR}")

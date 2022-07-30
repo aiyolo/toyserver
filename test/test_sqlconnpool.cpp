@@ -10,9 +10,10 @@ int main(){
     if(conn) cout << "get conn success" << endl;
     else cout << "get conn failed" << endl;
     std::cout << "connect success" << std::endl;
-    int res = mysql_query(conn, "select * from user");
+    // int res = mysql_query(conn, "select * from user");
+    int res = mysql_query(conn, "select username, password from user where username='root'");
     if(res != 0){
-        std::cout << "query error" << std::endl;
+        std::cout << mysql_error(conn);
         return 1;
     }
     MYSQL_RES* res_ptr = mysql_store_result(conn);
